@@ -1,57 +1,63 @@
-"""Shared-token access gate.
+"""Email + shared-password access gate.
 
-Same model as the seller-trial dashboard: the app is deployed publicly, but data
-is shown only to visitors carrying a valid `?token=...` in the URL. The token is a
-single shared secret (this app has one internal audience, so there's no per-user
-mapping like the seller dashboard's `[seller_tokens]`).
-
-Set the token in Streamlit secrets:
-
-    [access]
-    token = "<random-string>"
-
-Generate one with:  python -c "import secrets; print(secrets.token_urlsafe(16))"
+Colleagues sign in with their @wyzauto.com email and a single shared password
+(set in secrets under [access].password). The email is a self-identified label —
+the password is the actual gate — and each successful sign-in is logged to a
+Google Sheet (see src/notify.py).
 """
+
+import re
 
 import streamlit as st
 
+from src.notify import log_access
 
-def _expected_token() -> str | None:
+WYZ_DOMAIN = "@wyzauto.com"
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _expected_password() -> str | None:
     try:
-        return str(st.secrets["access"]["token"])
+        return str(st.secrets["access"]["password"])
     except (KeyError, FileNotFoundError):
         return None
 
 
-def require_token_or_stop() -> None:
-    """Stop rendering unless the URL carries the valid shared token.
+def require_login_or_stop() -> str:
+    """Render the login form and stop until a valid email+password is given.
 
-    Streamlit's nav can drop query params on rerun, so a validated token is
-    persisted in session_state and reflected back into the URL.
+    Returns the authenticated @wyzauto.com email. Auth is held in session_state
+    so the form only shows once per browser session.
     """
-    expected = _expected_token()
+    if st.session_state.get("authed"):
+        return st.session_state["email"]
+
+    expected = _expected_password()
     if not expected:
-        st.error(
-            "Access is not configured. Set `[access].token` in the app secrets."
-        )
+        st.error("Access is not configured. Set `[access].password` in the app secrets.")
         st.stop()
 
-    token = st.query_params.get("token") or st.session_state.get("token")
+    st.title("WYZauto Product Referential")
+    st.caption("Internal tool — sign in with your WYZauto email to continue.")
 
-    if token is None:
-        st.title("WYZauto Product Referential")
-        st.info(
-            "This tool is internal. Please open it with the private link "
-            "(it ends with `?token=...`). Contact the data team if you need one."
-        )
+    with st.form("login"):
+        email = st.text_input("Work email", placeholder="you@wyzauto.com")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Sign in", type="primary")
+
+    if not submitted:
         st.stop()
 
-    if str(token) != expected:
-        st.title("WYZauto Product Referential")
-        st.error("This access link is not valid. Please check the link you received.")
+    email = (email or "").strip().lower()
+    if not _EMAIL_RE.match(email) or not email.endswith(WYZ_DOMAIN):
+        st.error("Please sign in with your **@wyzauto.com** email address.")
+        st.stop()
+    if password != expected:
+        st.error("Incorrect password. Contact the data team if you need access.")
         st.stop()
 
-    # Valid — persist across reruns and keep it in the URL.
-    st.session_state["token"] = str(token)
-    if st.query_params.get("token") != str(token):
-        st.query_params["token"] = str(token)
+    # Success — record it (best-effort) and enter the app.
+    st.session_state["authed"] = True
+    st.session_state["email"] = email
+    log_access(email)
+    st.rerun()

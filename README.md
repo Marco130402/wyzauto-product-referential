@@ -126,10 +126,13 @@ cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # paste SA JSON + s
 
 ### Access model
 
-Deployed as a **public** Streamlit Community Cloud app, but data shows only with a valid
-`?token=` (same pattern as the seller-trial dashboard). Set the token under `[access]` in
-secrets; generate one with `python -c "import secrets; print(secrets.token_urlsafe(16))"`.
-Share `https://<app>.streamlit.app/?token=<token>` with colleagues.
+Deployed as a **public** Streamlit Community Cloud app, gated by a sign-in form:
+colleagues enter their **@wyzauto.com email + a shared password** (`[access].password` in
+secrets). Non-wyzauto emails are rejected. Each successful sign-in appends
+`(timestamp, email)` to a **Google Sheet access log** (`[notify].sheet_id`), written via
+the same service account — so the sheet must be shared (Editor) with
+`claude-bq-reader@wyzauto-v2-prod` and the Google Sheets API enabled on the project.
+Logging is best-effort and never blocks login. See `src/auth.py` and `src/notify.py`.
 
 ### Deploy
 

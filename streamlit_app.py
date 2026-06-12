@@ -25,10 +25,16 @@ from generate_category_queries import (  # noqa: E402
     build_query,
     build_unified_query,
 )
-from src.auth import require_token_or_stop  # noqa: E402
+from src.auth import require_login_or_stop  # noqa: E402
 from src.bq_client import run_query  # noqa: E402
 
-require_token_or_stop()
+email = require_login_or_stop()
+with st.sidebar:
+    st.caption(f"Signed in as **{email}**")
+    if st.button("Log out"):
+        for _k in ("authed", "email", "export"):
+            st.session_state.pop(_k, None)
+        st.rerun()
 
 FULL_LABEL = "Full referential (all products)"
 
