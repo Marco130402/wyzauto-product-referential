@@ -40,8 +40,8 @@ Every query returns **one row per product** (verified: 51,439 rows = 51,439 dist
 | *attribute columns* | `product_specification.value` | One column per `attribute.code` relevant to the category. STRING-typed (e.g. `"40.0000"`), since `value` is STRING. |
 
 `all_products.sql` is the same with the **union of all 74 attribute codes** as columns
-(86 columns total); attribute columns are NULL where the code doesn't apply to that
-product's category.
+(84 columns total: 8 base + 2 price + 74 attribute); attribute columns are NULL where the
+code doesn't apply to that product's category.
 
 ## Source tables & joins
 
