@@ -1,0 +1,11 @@
+# Google Cloud Functions framework
+functions-framework==3.4.0
+
+# BigQuery client
+google-cloud-bigquery==3.25.0
+
+# Firebase Admin SDK — used to verify Firebase ID tokens
+firebase-admin==6.5.0
+
+# Google Auth
+google-auth>=2.26.1
