@@ -34,13 +34,12 @@ Every query returns **one row per product** (verified: 51,439 rows = 51,439 dist
 | `category` | `product.category` | The leaf category code. |
 | `last_synced_at` | `product.last_synced_at` | |
 | `sku_manufacturer` | `product.sku_manufacturer` | |
-| `oem_number` | `product.oem_number` | REPEATED array flattened with `ARRAY_TO_STRING(.., ' \| ')`. |
 | `amount_th_recommended_price` | `product_price` | Pivoted from `(country_code, price_type)`. |
 | `amount_my_recommended_price` | `product_price` | NULL for TH-only products. |
 | *attribute columns* | `product_specification.value` | One column per `attribute.code` relevant to the category. STRING-typed (e.g. `"40.0000"`), since `value` is STRING. |
 
-`all_products.sql` is the same with the **union of all 74 attribute codes** as columns
-(84 columns total: 8 base + 2 price + 74 attribute); attribute columns are NULL where the
+`all_products.sql` is the same with the **union of all 71 attribute codes** as columns
+(80 columns total: 7 base + 2 price + 71 attribute); attribute columns are NULL where the
 code doesn't apply to that product's category.
 
 ## Source tables & joins

@@ -23,7 +23,6 @@ specs AS (
     MAX(IF(a.code = 'load_index', ps.value, NULL)) AS `load_index`,
     MAX(IF(a.code = 'match_code', ps.value, NULL)) AS `match_code`,
     MAX(IF(a.code = 'pattern', ps.value, NULL)) AS `pattern`,
-    MAX(IF(a.code = 'recommended_retail_price', ps.value, NULL)) AS `recommended_retail_price`,
     MAX(IF(a.code = 'seat', ps.value, NULL)) AS `seat`,
     MAX(IF(a.code = 'sidewall_logo', ps.value, NULL)) AS `sidewall_logo`,
     MAX(IF(a.code = 'speed_index', ps.value, NULL)) AS `speed_index`,
@@ -45,7 +44,6 @@ SELECT
   p.category,
   p.last_synced_at,
   p.sku_manufacturer,
-  ARRAY_TO_STRING(p.oem_number, ' | ') AS oem_number,
   pr.amount_th_recommended_price,
   pr.amount_my_recommended_price,
   s.* EXCEPT (product_id)

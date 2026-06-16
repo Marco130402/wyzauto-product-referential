@@ -32,27 +32,27 @@ PRICE_COMBOS = [
 
 # category -> list of attribute codes present for that category
 CATEGORY_CODES = {
-    "4_wheelers": ["OE_marking", "aspect_ratio", "brand_special", "factory_price", "fitting_front_rear", "load_dual", "load_format", "load_index", "match_code", "pattern", "runflat", "season", "seat", "speed_index", "tech_marking", "tube_type", "tyre_structure", "tyre_type", "width_tyre"],
+    "4_wheelers": ["OE_marking", "aspect_ratio", "brand_special", "fitting_front_rear", "load_dual", "load_format", "load_index", "match_code", "pattern", "runflat", "season", "seat", "speed_index", "tech_marking", "tube_type", "tyre_structure", "tyre_type", "width_tyre"],
     "brake_pad": ["Thickness_2", "Width_2", "fitting_front_rear", "fitting_left_right", "height", "height_2", "possible_carmatch", "product_series", "productdetail", "remark", "thickness", "width"],
     "others_others": ["fitting_center_inner_outer", "fitting_front_rear", "fitting_left_right", "fitting_upr_lwr", "possible_carmatch", "product_series", "productdetail", "remark"],
     "shock_absorber": ["fitting_front_rear", "fitting_left_right", "mounting_lwr_type", "mounting_upr_type", "possible_carmatch", "product_series", "remark", "shock_type", "stroke"],
     "brake_discs": ["brake_disc_type", "diameter_centering", "diameter_outer", "fitting_front_rear", "fitting_left_right", "height", "holes_nbr", "possible_carmatch", "product_series", "remark", "thickness", "thickness_min"],
-    "2_wheelers": ["aspect_ratio", "fitting_front_rear", "load_dual", "load_index", "match_code", "pattern", "recommended_retail_price", "seat", "sidewall_logo", "speed_index", "tech_marking", "tube_type", "tyre_structure", "tyre_type", "vehicle_type_tyre", "width_tyre"],
-    "filter_air": ["competitor_part_number", "possible_carmatch", "remark"],
-    "filter_oil": ["competitor_part_number", "possible_carmatch", "remark"],
+    "2_wheelers": ["aspect_ratio", "fitting_front_rear", "load_dual", "load_index", "match_code", "pattern", "seat", "sidewall_logo", "speed_index", "tech_marking", "tube_type", "tyre_structure", "tyre_type", "vehicle_type_tyre", "width_tyre"],
+    "filter_air": ["possible_carmatch", "remark"],
+    "filter_oil": ["possible_carmatch", "remark"],
     "tie_rod_end": ["fitting_center_inner_outer", "fitting_front_rear", "fitting_left_right", "possible_carmatch"],
     "control_trailing_arm": ["fitting_front_rear", "fitting_left_right", "fitting_upr_lwr", "possible_carmatch", "remark"],
     "battery_l2": ["battery_model", "battery_type", "capacity", "cca", "din_jis", "height", "length", "product_series", "remark", "side", "width"],
     "stabilizer_link": ["fitting_front_rear", "fitting_left_right", "possible_carmatch", "remark"],
     "wiper_blade": ["Wiperblade_length_2", "fitting_front_rear", "fitting_left_right", "possible_carmatch", "product_series", "productdetail", "remark", "wiper_blade_type", "wiperbade_length_1"],
     "shockabsorber_protectionkit": ["fitting_front_rear", "fitting_left_right", "possible_carmatch", "product_series", "remark", "shock_type"],
-    "filter_cabin_air": ["competitor_part_number", "height", "length", "possible_carmatch", "product_model_cabinairfilter", "product_series", "remark", "width"],
+    "filter_cabin_air": ["height", "length", "possible_carmatch", "product_model_cabinairfilter", "product_series", "remark", "width"],
     "brake_shoe": ["fitting_front_rear", "fitting_left_right", "possible_carmatch", "product_series", "remark"],
     "engine_oil": ["engine_type", "oil_change_frequency", "oil_grade", "product_series", "productdetail", "remark", "viscosity_code", "volume_capacity"],
     "inner_tie_rod": ["fitting_front_rear", "fitting_left_right", "possible_carmatch", "remark"],
-    "filter_transmission": ["competitor_part_number", "possible_carmatch", "remark"],
+    "filter_transmission": ["possible_carmatch", "remark"],
     "ball_joint": ["fitting_front_rear", "fitting_left_right", "fitting_upr_lwr", "possible_carmatch", "remark"],
-    "filter_fuel": ["competitor_part_number", "engine_type2", "possible_carmatch"],
+    "filter_fuel": ["engine_type2", "possible_carmatch"],
     "lubricants_others": ["engine_type", "oil_change_frequency", "product_series", "productdetail", "viscosity_code", "volume_capacity"],
     "ignition_coil": ["possible_carmatch", "productdetail", "remark"],
     "spark_plug": ["Hexagon_Size", "Thread_diameter", "Thread_length", "possible_carmatch", "product_series", "productdetail", "remark"],
@@ -197,13 +197,74 @@ SELECT
   p.category,
   p.last_synced_at,
   p.sku_manufacturer,
-  ARRAY_TO_STRING(p.oem_number, ' | ') AS oem_number,
 {price_select}{specs_select}
 FROM `{PROJECT}.base_tables.product` p
 LEFT JOIN cat ON cat.leaf_code = p.category
 LEFT JOIN prices pr ON pr.product_id = p.id{specs_join}
 WHERE p.category = '{category}'
 ORDER BY p.brand, p.product_name;
+"""
+
+
+def build_group_query(categories: list[str]) -> str:
+    """One row per product across several leaf categories that share a parent
+    (e.g. both tyre types — `2_wheelers` + `4_wheelers` — as a single export).
+    Columns = the union of those categories' attribute codes (sparse: NULL where
+    a code doesn't apply to a given product's category)."""
+    codes = sorted({c for cat in categories for c in CATEGORY_CODES[cat]})
+    cat_list = ", ".join(f"'{c}'" for c in categories)
+
+    price_lines = ",\n".join(
+        f"    MAX(IF(country_code = '{cc}' AND price_type = '{pt}', amount, NULL)) "
+        f"AS amount_{cc}_{pt}"
+        for cc, pt in PRICE_COMBOS
+    )
+    price_select = ",\n".join(f"  pr.amount_{cc}_{pt}" for cc, pt in PRICE_COMBOS)
+
+    if codes:
+        pivot_lines = ",\n".join(
+            f"    MAX(IF(a.code = '{c}', ps.value, NULL)) AS {quote_ident(c)}"
+            for c in codes
+        )
+        specs_cte = f""",
+specs AS (
+  SELECT
+    ps.product_id,
+{pivot_lines}
+  FROM `{PROJECT}.base_tables.product_specification` ps
+  JOIN `{PROJECT}.base_tables.attribute` a ON a.id = ps.attribute_id
+  GROUP BY ps.product_id
+)"""
+        specs_join = "\nLEFT JOIN specs s ON s.product_id = p.id"
+        specs_select = ",\n  s.* EXCEPT (product_id)"
+    else:
+        specs_cte = specs_join = specs_select = ""
+
+    return f"""-- Flattened product export: categories = {", ".join(categories)}
+-- One row per product across these leaf categories. parent_category added;
+-- union of their attribute codes and price flattened to columns.
+WITH {CAT_CTE},
+prices AS (
+  SELECT
+    product_id,
+{price_lines}
+  FROM `{PROJECT}.base_tables.product_price`
+  GROUP BY product_id
+){specs_cte}
+SELECT
+  p.id AS product_id,
+  p.brand,
+  p.product_name,
+  cat.parent_category,
+  p.category,
+  p.last_synced_at,
+  p.sku_manufacturer,
+{price_select}{specs_select}
+FROM `{PROJECT}.base_tables.product` p
+LEFT JOIN cat ON cat.leaf_code = p.category
+LEFT JOIN prices pr ON pr.product_id = p.id{specs_join}
+WHERE p.category IN ({cat_list})
+ORDER BY p.category, p.brand, p.product_name;
 """
 
 
@@ -247,7 +308,6 @@ SELECT
   p.category,
   p.last_synced_at,
   p.sku_manufacturer,
-  ARRAY_TO_STRING(p.oem_number, ' | ') AS oem_number,
 {price_select},
   s.* EXCEPT (product_id)
 FROM `{PROJECT}.base_tables.product` p

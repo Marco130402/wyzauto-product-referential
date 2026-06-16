@@ -22,6 +22,7 @@ st.set_page_config(
 from generate_category_queries import (  # noqa: E402
     CATEGORY_CODES,
     CATEGORY_PARENTS,
+    build_group_query,
     build_query,
     build_unified_query,
 )
@@ -37,6 +38,8 @@ with st.sidebar:
         st.rerun()
 
 FULL_LABEL = "Full referential (all products)"
+# Tyres are exported as one combined file (both 2- and 4-wheelers), no leaf breakdown.
+TYRE_GROUP = "tyres"
 
 # parent category -> sorted list of its leaf categories
 LEAVES_BY_PARENT: dict[str, list[str]] = {}
@@ -61,9 +64,14 @@ group = st.selectbox(
 )
 
 is_full = group == FULL_LABEL
+is_tyres = group == TYRE_GROUP
 if is_full:
     choice = None
     slug = "all_products"
+elif is_tyres:
+    choice = None
+    slug = "tyres"
+    st.caption("Tyres export as one file — both 2-wheeler and 4-wheeler products combined.")
 else:
     choice = st.selectbox(
         "Category",
@@ -74,7 +82,12 @@ else:
     slug = choice
 
 if st.button("1 · Build export", type="primary"):
-    sql = build_unified_query() if is_full else build_query(choice, CATEGORY_CODES[choice])
+    if is_full:
+        sql = build_unified_query()
+    elif is_tyres:
+        sql = build_group_query(LEAVES_BY_PARENT[TYRE_GROUP])
+    else:
+        sql = build_query(choice, CATEGORY_CODES[choice])
     with st.spinner("Querying BigQuery…"):
         df = run_query(sql)
     st.session_state["export"] = {

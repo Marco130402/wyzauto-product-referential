@@ -17,7 +17,6 @@ prices AS (
 specs AS (
   SELECT
     ps.product_id,
-    MAX(IF(a.code = 'competitor_part_number', ps.value, NULL)) AS `competitor_part_number`,
     MAX(IF(a.code = 'height', ps.value, NULL)) AS `height`,
     MAX(IF(a.code = 'length', ps.value, NULL)) AS `length`,
     MAX(IF(a.code = 'possible_carmatch', ps.value, NULL)) AS `possible_carmatch`,
@@ -37,7 +36,6 @@ SELECT
   p.category,
   p.last_synced_at,
   p.sku_manufacturer,
-  ARRAY_TO_STRING(p.oem_number, ' | ') AS oem_number,
   pr.amount_th_recommended_price,
   pr.amount_my_recommended_price,
   s.* EXCEPT (product_id)

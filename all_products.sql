@@ -1,5 +1,5 @@
 -- Unified flattened product export: ALL categories, one row per product.
--- 74 attribute codes pivoted to columns (sparse -- NULL where N/A).
+-- 71 attribute codes pivoted to columns (sparse -- NULL where N/A).
 WITH cat AS (
   SELECT c.code AS leaf_code, parent.code AS parent_category
   FROM `wyzauto-v2-prod.base_tables.category` c
@@ -33,14 +33,12 @@ specs AS (
     MAX(IF(a.code = 'capacity', ps.value, NULL)) AS `capacity`,
     MAX(IF(a.code = 'cca', ps.value, NULL)) AS `cca`,
     MAX(IF(a.code = 'colour', ps.value, NULL)) AS `colour`,
-    MAX(IF(a.code = 'competitor_part_number', ps.value, NULL)) AS `competitor_part_number`,
     MAX(IF(a.code = 'coolant_spec', ps.value, NULL)) AS `coolant_spec`,
     MAX(IF(a.code = 'diameter_centering', ps.value, NULL)) AS `diameter_centering`,
     MAX(IF(a.code = 'diameter_outer', ps.value, NULL)) AS `diameter_outer`,
     MAX(IF(a.code = 'din_jis', ps.value, NULL)) AS `din_jis`,
     MAX(IF(a.code = 'engine_type', ps.value, NULL)) AS `engine_type`,
     MAX(IF(a.code = 'engine_type2', ps.value, NULL)) AS `engine_type2`,
-    MAX(IF(a.code = 'factory_price', ps.value, NULL)) AS `factory_price`,
     MAX(IF(a.code = 'fitting_center_inner_outer', ps.value, NULL)) AS `fitting_center_inner_outer`,
     MAX(IF(a.code = 'fitting_front_rear', ps.value, NULL)) AS `fitting_front_rear`,
     MAX(IF(a.code = 'fitting_left_right', ps.value, NULL)) AS `fitting_left_right`,
@@ -66,7 +64,6 @@ specs AS (
     MAX(IF(a.code = 'product_series', ps.value, NULL)) AS `product_series`,
     MAX(IF(a.code = 'product_spec_nlgi', ps.value, NULL)) AS `product_spec_nlgi`,
     MAX(IF(a.code = 'productdetail', ps.value, NULL)) AS `productdetail`,
-    MAX(IF(a.code = 'recommended_retail_price', ps.value, NULL)) AS `recommended_retail_price`,
     MAX(IF(a.code = 'remark', ps.value, NULL)) AS `remark`,
     MAX(IF(a.code = 'runflat', ps.value, NULL)) AS `runflat`,
     MAX(IF(a.code = 'season', ps.value, NULL)) AS `season`,
@@ -102,7 +99,6 @@ SELECT
   p.category,
   p.last_synced_at,
   p.sku_manufacturer,
-  ARRAY_TO_STRING(p.oem_number, ' | ') AS oem_number,
   pr.amount_th_recommended_price,
   pr.amount_my_recommended_price,
   s.* EXCEPT (product_id)

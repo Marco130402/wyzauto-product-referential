@@ -20,7 +20,6 @@ specs AS (
     MAX(IF(a.code = 'OE_marking', ps.value, NULL)) AS `OE_marking`,
     MAX(IF(a.code = 'aspect_ratio', ps.value, NULL)) AS `aspect_ratio`,
     MAX(IF(a.code = 'brand_special', ps.value, NULL)) AS `brand_special`,
-    MAX(IF(a.code = 'factory_price', ps.value, NULL)) AS `factory_price`,
     MAX(IF(a.code = 'fitting_front_rear', ps.value, NULL)) AS `fitting_front_rear`,
     MAX(IF(a.code = 'load_dual', ps.value, NULL)) AS `load_dual`,
     MAX(IF(a.code = 'load_format', ps.value, NULL)) AS `load_format`,
@@ -48,7 +47,6 @@ SELECT
   p.category,
   p.last_synced_at,
   p.sku_manufacturer,
-  ARRAY_TO_STRING(p.oem_number, ' | ') AS oem_number,
   pr.amount_th_recommended_price,
   pr.amount_my_recommended_price,
   s.* EXCEPT (product_id)
