@@ -1,0 +1,10 @@
+{
+    "entry_point": "product_referential_export",
+    "trigger": "http",
+    "timeout": 540,
+    "memory": "1Gi",
+    "secrets": {
+        "FIREBASE_PROJECT_ID": "common-firebase-project-id:latest",
+        "BQ_PROJECT": "common-bq-project-id:latest"
+    }
+}
